@@ -36,9 +36,7 @@ public class MainKafka {
                 .option("subscribe", "test")
                 .option("startingOffsets", "earliest")
                 .load();
-//        lines.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)");
-
-        lines.printSchema();
+//        lines.printSchema();
 
         // Split the lines into words
         Dataset<String> words = lines.selectExpr("CAST(value AS STRING)")

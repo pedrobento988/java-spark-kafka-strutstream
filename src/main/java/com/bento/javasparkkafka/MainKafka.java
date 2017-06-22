@@ -73,18 +73,4 @@ public class MainKafka {
                 .trigger(new ProcessingTime(10000))
                 .start();
     }
-
-    /**
-     * Initialize Streaming Query to export results into console.
-     *
-     * @param rowDataset dataset to read from
-     * @return Streaming query created
-     */
-    private static StreamingQuery getConsoleOutput(Dataset<Row> rowDataset) {
-        // Start running the query that prints the running counts to the console
-        return rowDataset.writeStream()
-                .outputMode("complete")
-                .format("console")
-                .start();
-    }
 }

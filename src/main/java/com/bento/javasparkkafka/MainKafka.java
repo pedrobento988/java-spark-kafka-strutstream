@@ -32,7 +32,7 @@ public class MainKafka {
                 .getOrCreate();
 
 
-        // Create DataFrame representing the stream of input lines from connection to localhost:9999
+        // Create DataFrame representing the stream of input lines from kafka @ localhost:9092
         Dataset<Row> lines = spark
                 .readStream()
                 .format("kafka")
@@ -40,7 +40,6 @@ public class MainKafka {
                 .option("subscribe", "test")
                 .option("startingOffsets", "earliest")
                 .load();
-//        lines.printSchema();
 
         // Split the lines into words
         Dataset<String> words = lines.selectExpr("CAST(value AS STRING)")
@@ -55,20 +54,19 @@ public class MainKafka {
         // Generate running word count
         Dataset<Row> wordCounts = words.groupBy("value").count();
 
+        // Initialize Output Streaming query
+        // We are also converting each row into KafkaOutputSchema
         StreamingQuery query = getKafkaOutput(wordCounts.as(Encoders.bean(KafkaOutputSchema.class)));
-//        StreamingQuery query = getConsoleOutput(wordCounts);
 
         query.awaitTermination();
     }
 
-    private static StreamingQuery getConsoleOutput(Dataset<Row> rowDataset) {
-        // Start running the query that prints the running counts to the console
-        return rowDataset.writeStream()
-                .outputMode("complete")
-                .format("console")
-                .start();
-    }
-
+    /**
+     * Initialize Streaming Query to export results into Kafka.
+     *
+     * @param rowDataset dataset to read from. Rows should be already in KafkaOutputSchema
+     * @return Streaming query created
+     */
     private static StreamingQuery getKafkaOutput(Dataset<KafkaOutputSchema> rowDataset) {
         String topic = "testresult";
         String brokers = "localhost:9092";
@@ -80,5 +78,19 @@ public class MainKafka {
                         .outputMode("complete")
                         .trigger(new ProcessingTime(10000))
                         .start();
+    }
+
+    /**
+     * Initialize Streaming Query to export results into console.
+     *
+     * @param rowDataset dataset to read from
+     * @return Streaming query created
+     */
+    private static StreamingQuery getConsoleOutput(Dataset<Row> rowDataset) {
+        // Start running the query that prints the running counts to the console
+        return rowDataset.writeStream()
+                .outputMode("complete")
+                .format("console")
+                .start();
     }
 }

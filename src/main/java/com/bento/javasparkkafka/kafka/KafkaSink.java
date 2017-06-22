@@ -1,16 +1,20 @@
 package com.bento.javasparkkafka.kafka;
 
 
+import com.bento.javasparkkafka.datatransformation.GenericDT;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.spark.sql.ForeachWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 
 /**
  * Created by bento on 22/06/2017.
  */
-public class KafkaSink extends ForeachWriter<KafkaOutputSchema> {
+public class KafkaSink<T extends GenericDT> extends ForeachWriter<T> {
+
     private Properties kafkaProperties = new Properties();
     private KafkaProducer<String, String> producer;
     private String topic;
@@ -25,13 +29,12 @@ public class KafkaSink extends ForeachWriter<KafkaOutputSchema> {
     }
 
     public boolean open(long partitionId, long version) {
-        producer = new KafkaProducer<String, String>(kafkaProperties);
+        producer = new KafkaProducer<>(kafkaProperties);
         return true;
     }
 
-    public void process(KafkaOutputSchema value) {
-        // TODO improve: key is being saved as value! Could use another ProducerRecord constructor to separate these
-        producer.send(new ProducerRecord<String, String>(topic, value.getValue() + ":" + value.getCount()));
+    public void process(T value) {
+        producer.send(new ProducerRecord<>(topic, value.transformData()));
     }
 
     public void close(Throwable errorOrNull) {

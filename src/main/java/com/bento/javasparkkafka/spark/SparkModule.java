@@ -1,6 +1,6 @@
 package com.bento.javasparkkafka.spark;
 
-import com.bento.javasparkkafka.kafka.KafkaOutputSchema;
+import com.bento.javasparkkafka.datatransformation.GenericDT;
 import com.bento.javasparkkafka.kafka.KafkaSink;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -34,18 +34,18 @@ public class SparkModule {
     /**
      * Initialize Streaming Query to export results into Kafka.
      *
-     * @param rowDataset dataset to read from. Rows should be already in KafkaOutputSchema
+     * @param rowDataset dataset to read from.
      * @return Streaming query created
      */
-    static StreamingQuery createKafkaProducer(Dataset<KafkaOutputSchema> rowDataset) {
+    static <T extends GenericDT> StreamingQuery createKafkaProducer(Dataset<T> rowDataset) {
         String topic = "testresult";
         String brokers = "localhost:9092";
 
-        KafkaSink writer = new KafkaSink(topic, brokers);
+        KafkaSink<T> writer = new KafkaSink<>(topic, brokers);
 
         return rowDataset.writeStream()
                 .foreach(writer)
-                .outputMode("complete")
+                .outputMode("append")
                 .trigger(new ProcessingTime(10000))
                 .start();
     }

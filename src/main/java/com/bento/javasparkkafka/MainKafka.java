@@ -1,15 +1,19 @@
 package com.bento.javasparkkafka;
 
+import com.bento.javasparkkafka.kafka.KafkaOutputSchema;
+import com.bento.javasparkkafka.kafka.KafkaSink;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.streaming.ProcessingTime;
 import org.apache.spark.sql.streaming.StreamingQuery;
 import org.apache.spark.sql.streaming.StreamingQueryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -51,14 +55,30 @@ public class MainKafka {
         // Generate running word count
         Dataset<Row> wordCounts = words.groupBy("value").count();
 
-
-        // Start running the query that prints the running counts to the console
-        StreamingQuery query = wordCounts.writeStream()
-                .outputMode("complete")
-                .format("console")
-                .start();
+        StreamingQuery query = getKafkaOutput(wordCounts.as(Encoders.bean(KafkaOutputSchema.class)));
+//        StreamingQuery query = getConsoleOutput(wordCounts);
 
         query.awaitTermination();
     }
 
+    private static StreamingQuery getConsoleOutput(Dataset<Row> rowDataset) {
+        // Start running the query that prints the running counts to the console
+        return rowDataset.writeStream()
+                .outputMode("complete")
+                .format("console")
+                .start();
+    }
+
+    private static StreamingQuery getKafkaOutput(Dataset<KafkaOutputSchema> rowDataset) {
+        String topic = "testresult";
+        String brokers = "localhost:9092";
+
+        KafkaSink writer = new KafkaSink(topic, brokers);
+
+        return rowDataset.writeStream()
+                        .foreach(writer)
+                        .outputMode("complete")
+                        .trigger(new ProcessingTime(10000))
+                        .start();
+    }
 }

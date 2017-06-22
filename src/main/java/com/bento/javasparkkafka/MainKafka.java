@@ -13,9 +13,7 @@ import org.apache.spark.sql.streaming.StreamingQueryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
 import java.util.Arrays;
-import java.util.Iterator;
 
 /**
  * Created by bento on 21/06/2017.
@@ -45,11 +43,7 @@ public class MainKafka {
         Dataset<String> words = lines.selectExpr("CAST(value AS STRING)")
                 .as(Encoders.STRING())
                 .flatMap(
-                        new FlatMapFunction<String, String>() {
-                            public Iterator<String> call(String x) {
-                                return Arrays.asList(x.split(" ")).iterator();
-                            }
-                        }, Encoders.STRING());
+                        (FlatMapFunction<String, String>) x -> Arrays.asList(x.split(" ")).iterator(), Encoders.STRING());
 
         // Generate running word count
         Dataset<Row> wordCounts = words.groupBy("value").count();
@@ -74,10 +68,10 @@ public class MainKafka {
         KafkaSink writer = new KafkaSink(topic, brokers);
 
         return rowDataset.writeStream()
-                        .foreach(writer)
-                        .outputMode("complete")
-                        .trigger(new ProcessingTime(10000))
-                        .start();
+                .foreach(writer)
+                .outputMode("complete")
+                .trigger(new ProcessingTime(10000))
+                .start();
     }
 
     /**

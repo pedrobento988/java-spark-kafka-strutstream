@@ -40,15 +40,10 @@ public class Main {
         Dataset<String> words = lines
                 .as(Encoders.STRING())
                 .flatMap(
-                        new FlatMapFunction<String, String>() {
-                            public Iterator<String> call(String x) {
-                                return Arrays.asList(x.split(" ")).iterator();
-                            }
-                        }, Encoders.STRING());
+                        (FlatMapFunction<String, String>) x -> Arrays.asList(x.split(" ")).iterator(), Encoders.STRING());
 
         // Generate running word count
         Dataset<Row> wordCounts = words.groupBy("value").count();
-
 
         // Start running the query that prints the running counts to the console
         StreamingQuery query = wordCounts.writeStream()

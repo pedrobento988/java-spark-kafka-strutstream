@@ -27,7 +27,7 @@ public class SparkModule {
                 .format("kafka")
                 .option("kafka.bootstrap.servers", "localhost:9092")
                 .option("subscribe", "test")
-                .option("startingOffsets", "earliest")
+                .option("startingOffsets", "latest")
                 .load();
     }
 
@@ -44,6 +44,7 @@ public class SparkModule {
         KafkaSink<T> writer = new KafkaSink<>(topic, brokers);
 
         return rowDataset.writeStream()
+                .option("checkpointLocation", "/tmp/offsets")
                 .foreach(writer)
                 .outputMode("append")
                 .trigger(new ProcessingTime(10000))
